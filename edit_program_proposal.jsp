@@ -1,0 +1,726 @@
+<%@page import="Model.Patient"%>
+<%@page import="Model.Program"%>
+<%@page import="Model.Vaccine"%>
+<%@page import="Model.User"%>
+<%@page import="Model.Resource"%>
+<%@page import="Model.Consultation"%>
+<%@page import="Model.Diagnosis"%>
+<%@page import="Model.Medication"%>
+<%@page import="Model.Chart"%>
+<%@page import="DAO.doctorDAO"%>
+<%@page import="DAO.nurseDAO"%>
+<%@page import="DAO.programDAO"%>
+<%@page import="DAO.chartsDAO"%>
+<%@page import="java.text.DateFormat"%>
+<%@page import="java.text.SimpleDateFormat"%>
+<%@page import="java.sql.Date;"%>
+<%@page import="java.util.ArrayList"%>
+
+<html>
+
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <!-- Meta, title, CSS, favicons, etc. -->
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <title> Edit Program Proposal </title>
+
+    <!-- Bootstrap -->
+    <link href="vendors/bootstrap/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link href="vendors/font-awesome/css/font-awesome.min.css" rel="stylesheet">
+    <!-- NProgress -->
+    <link href="vendors/nprogress/nprogress.css" rel="stylesheet">
+    <!-- iCheck -->
+    <link href="vendors/iCheck/skins/flat/green.css" rel="stylesheet">
+    <!-- bootstrap-wysiwyg -->
+    <link href="vendors/google-code-prettify/bin/prettify.min.css" rel="stylesheet">
+    <!-- Select2 -->
+    <link href="vendors/select2/dist/css/select2.min.css" rel="stylesheet">
+    <!-- Switchery -->
+    <link href="vendors/switchery/dist/switchery.min.css" rel="stylesheet">
+    <!-- starrr -->
+    <link href="vendors/starrr/dist/starrr.css" rel="stylesheet">
+    <!-- bootstrap-daterangepicker -->
+    <link href="vendors/bootstrap-daterangepicker/daterangepicker.css" rel="stylesheet">
+    <!-- prettyCheckbox -->
+    <link href="vendors/pretty-checkbox/src/pretty.min.css" rel="stylesheet">
+    <!-- multiselect -->
+    <link rel="stylesheet" href="vendors/bootstrap-multiselect/dist/css/bootstrap-multiselect.css" type="text/css"/>
+
+    <!-- Custom Theme Style -->
+    <link href="source/css/custom.min.css" rel="stylesheet">
+</head>
+
+<body class="nav-md footer_fixed">
+    <div class="container body">
+        <div class="main_container">
+        
+        <%
+           String userType = (String) session.getAttribute("position");
+            
+            //ACCESS CONTROL
+            if (!userType.equalsIgnoreCase("root") && !userType.equalsIgnoreCase("physician") && !userType.equalsIgnoreCase("nurse")){
+                response.sendRedirect("access-denied.jsp");
+                return;
+            }
+            
+            //SIDEBAR INCLUDE//
+            if (userType.equalsIgnoreCase("root")){ %>
+                <jsp:include page="/sidebar.jsp" />
+        <%} else if (userType.equalsIgnoreCase("physician")){ %>
+                <jsp:include page="/sidebar_doctor.jsp" />
+        <%} else if (userType.equalsIgnoreCase("nurse") || userType.equalsIgnoreCase("encoder") || userType.equalsIgnoreCase("midwife")){ %>
+                <jsp:include page="/sidebar_nurse.jsp" />
+        <%} else if (userType.equalsIgnoreCase("admin")){ %>
+                <jsp:include page="/sidebar_admin.jsp" />
+        <%}%>
+
+        
+        
+        
+<%
+    //INITIALIZATION
+    int programID = 0;
+    if (session.getAttribute("selectedProgram") != null){
+         programID = (Integer) session.getAttribute("selectedProgram");
+    } else if (session.getAttribute("selectedApproveProgram") != null){
+         programID = (Integer) session.getAttribute("selectedApproveProgram");
+    }
+    
+    nurseDAO nDAO = new nurseDAO();
+    Program currentProgram = new Program();
+    currentProgram = nDAO.getProgram(programID);
+    Diagnosis d = new Diagnosis(); 
+    d = nDAO.getDiagnosis(currentProgram.getDiagnosis());
+%>        
+        
+        <!--START OF PAGE CONTENT-->
+        <div class="right_col edited fix" role="main">
+          <ol class="breadcrumb">
+        <%
+               if (userType.equalsIgnoreCase("root")){ %>
+                <li class="breadcrumb-item"><a href="home.jsp">  Home </a></li>
+        <%} else if (userType.equalsIgnoreCase("physician")){ %>
+                <li class="breadcrumb-item"><a href="home_doctor.jsp">  Home </a></li>
+        <%} else if (userType.equalsIgnoreCase("nurse") || userType.equalsIgnoreCase("encoder") || userType.equalsIgnoreCase("midwife")){ %>
+                <li class="breadcrumb-item"><a href="home_nurse.jsp">  Home </a></li>
+        <%} else if (userType.equalsIgnoreCase("admin")){ %>
+                <li class="breadcrumb-item"><a href="home_admin.jsp">  Home </a></li>
+        <%}%>
+                
+                <li class="breadcrumb-item">Program</li>
+                <li class="breadcrumb-item active">Program Proposal</li>
+          </ol>
+          
+           <div class="col-md-12 col-sm-12 col-xs-12">
+                    
+            <!--Program Proposal Card-->
+            <form action="AddProgramProposal" method="post">
+                <input type="hidden" name="source" value="edit">
+            <div class="x_panel" id="programproposalcard">
+               
+                <div class="x_content">
+                    <center>
+                        <h3>
+                            <strong>PROGRAM PROPOSAL<br>
+                            </strong>
+                        </h3>
+                    </center>
+                    <!-- <button class="btn btn-default" onclick="window.print();"><i class="fa fa-print"></i> Print</button> -->
+                    <!--SPACER-->
+                        <div class="col-md-12"><br></div>
+                    <!--SPACER-->
+                </div>
+                <!--<div class="x_title">
+                    <strong>Program Proposal</strong>
+                </div>-->
+                <div class="x_content">
+                        
+                    <!--TITLE-->
+                    <div class="form-group row">
+                      
+                      <div class="col-md-12">
+                        <label class="col-md-2 control-label">Program Title:</label>
+                        
+                        <div class="col-md-5">
+                            <input type="text" required="required" class="form-control noMargin" id="title" name="title" value="<%=currentProgram.getTitle()%>">
+                        </div><!--/col-md-5-->
+                      </div>
+                        
+                    <!--SPACER-->
+                        <div class="col-md-12"><br></div>
+                    <!--SPACER-->
+                     
+                      <div class="col-md-12">
+                        <label class="col-md-2 control-label">Implementing Period:</label>
+
+                       <div class='col-md-5'>
+                            <div class="form-group">
+                                <div class='input-group date' id='datetimepicker6'>
+                                   
+                                   <label class="input-group-addon" for="age_min" style="font-size:10px;">From</label>
+                                    <input type="text" class="form-control" id="datepicker1" name="fromdate" value="<%=currentProgram.getProposed_date_from()%>">
+                                    <label class="input-group-addon" for="age_min" style="font-size:10px;">To&nbsp;&nbsp;</label>
+                                    <input type="text" class="form-control" id="datepicker2" name="todate" value="<%=currentProgram.getProposed_date_to()%>">
+                                    <span class="input-group-addon" style="">
+                                        <span class="glyphicon glyphicon-calendar"></span>
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                      </div><!--/col-md-12-->
+                      
+                      <!--SPACER-->
+                        <div class="col-md-12"><br></div>
+                    <!--SPACER-->
+                     
+                     <div class="col-md-12">
+                        <label class="col-md-2 control-label">Program Category:</label>
+
+                       <div class='col-md-4'>
+                            <select id="category" name="category" class="form-control">
+                               <option selected="true" disabled="disabled" value="">    --SELECT PROJECT CATEGORY--</option>
+                               
+                                <option <% if(currentProgram.getCategory().equalsIgnoreCase("Expanded Program on Immunization")){ %> selected <% } %> value="Expanded Program on Immunization">Expanded Program on Immunization</option>
+                                
+                                <option <% if(currentProgram.getCategory().equalsIgnoreCase("Disease Surveillance")){ %> selected <% } %> value="Disease Surveillance">Disease Surveillance</option>
+                                
+                                <option <% if(currentProgram.getCategory().equalsIgnoreCase("Control of Acute Respiratory Infections")){ %> selected <% } %> value="Control of Acute Respiratory Infections">Control of Acute Respiratory Infections</option>
+                                
+                                <option <% if(currentProgram.getCategory().equalsIgnoreCase("Control of Diarrheal Diseases")){ %> selected <% } %> value="Control of Diarrheal Diseases">Control of Diarrheal Diseases</option>
+                                
+                                <option <% if(currentProgram.getCategory().equalsIgnoreCase("Micronutrients Supplementation/Nutrition")){ %> selected <% } %> value="Micronutrients Supplementation/Nutrition">Micronutrients Supplementation/Nutrition</option>
+                                
+                                <option <% if(currentProgram.getCategory().equalsIgnoreCase("Family Planning Program")){ %> selected <% } %> value="Family Planning Program">Family Planning Program</option>
+                                
+                                <option <% if(currentProgram.getCategory().equalsIgnoreCase("Tuberculosis Control Program")){ %> selected <% } %> value="Tuberculosis Control Program">Tuberculosis Control Program</option>
+                                
+                                <option <% if(currentProgram.getCategory().equalsIgnoreCase("STD/AIDS Prevention and Control Program")){ %> selected <% } %> value="STD/AIDS Prevention and Control Program">STD/AIDS Prevention and Control Program</option>
+                                
+                                <option <% if(currentProgram.getCategory().equalsIgnoreCase("Environmental Sanitation Program")){ %> selected <% } %> value="Environmental Sanitation Program">Environmental Sanitation Program</option>
+                                
+                                <option <% if(currentProgram.getCategory().equalsIgnoreCase("Cancer Control Program")){ %> selected <% } %> value="Cancer Control Program">Cancer Control Program</option>
+                                
+                                <option <% if(currentProgram.getCategory().equalsIgnoreCase("Maternal Care")){ %> selected <% } %> value="Maternal Care">Maternal Care</option>
+                            </select>
+                        </div>
+                      </div><!--/col-md-12-->
+                      
+                      <!--SPACER-->
+                        <div class="col-md-12"><br></div>
+                    <!--SPACER-->
+                      
+                      <div class="col-md-12">
+                        <label class="col-md-2 control-label">No. of Participants:</label>
+                        
+                        <div class="col-md-5">
+                            <input type="number" required="required" class="form-control noMargin" id="title" name="noofparticipants" placeholder="e.g. 1,000" value="<%=currentProgram.getTarget()%>">
+                        </div><!--/col-md-5-->
+                      </div>
+                      
+                      <!--SPACER-->
+                        <div class="col-md-12"><br></div>
+                    <!--SPACER-->
+                      
+                      
+                      <div class="col-md-12">
+                          <label class="col-md-2 control-label">Target Disease:</label>
+                          <div class="col-md-5">
+                            <select class="diagnosis-multiple" name="diagnosis" style="width: 100%;">
+
+                                <%
+                                    ArrayList <Diagnosis> dList = new ArrayList();
+                                    dList = nDAO.getAllDiagnosis();
+                                for(int x=0; x < dList.size();x++){
+                                %>
+                                    <option <% if(d.getDiagnosis().equalsIgnoreCase(dList.get(x).getDiagnosis())){ %> selected <%}%> value = "<%=dList.get(x).getDiagnosis_id()%>"> <%=dList.get(x).getDiagnosis()%></option>
+                                <%}%>
+                            </select>
+
+                        </div>
+                     </div>
+                     
+                      <!--SPACER-->
+                        <div class="col-md-12"><br></div>
+                    <!--SPACER-->
+                     
+                     
+                      <div class="col-md-12">
+                        <label class="col-md-2 control-label">Target Participants:</label>
+                      </div>
+                      
+                      <div class="col-md-12">
+                          <div class="col-md-2"></div>
+                          <div class="col-md-8">
+                                <div class="row">
+                                <div class="col-md-2">
+                                <label>
+                                 <!-- <input type="checkbox" class="flat" checked="checked"> -->Age Range
+                                </label>
+                                </div>
+
+                                <div class="col-md-4">
+                                <select id="tag1" name="age" class="multipleselect" multiple="multiple">
+                                    
+                                    <option value="1"   <%if (currentProgram.getAge_groups().contains(1)){%>selected<%}%>   >Below 18</option>
+                                    <option value="2"   <%if (currentProgram.getAge_groups().contains(2)){%>selected<%}%>   >18-24</option>
+                                    <option value="3"   <%if (currentProgram.getAge_groups().contains(3)){%>selected<%}%>   >25-34</option>
+                                    <option value="4"   <%if (currentProgram.getAge_groups().contains(4)){%>selected<%}%>   >35-44</option>
+                                    <option value="5"   <%if (currentProgram.getAge_groups().contains(5)){%>selected<%}%>   >45-54</option>
+                                    <option value="6"   <%if (currentProgram.getAge_groups().contains(6)){%>selected<%}%>   >Above 55</option>
+                                    
+                                </select>
+                                </div>    
+                              </div>
+                              <!--/row-->
+                              <div class="row">&nbsp;</div>
+                              <div class="form-group row">
+                                <div class="col-md-2">
+                                <label>
+                                  Gender
+                                </label>
+                                </div>
+
+                                <div class="col-md-10">
+                                <select class="multipleselect" name="gender" id="tag2" multiple="multiple" >
+                                    <option value="Male"    <%if (currentProgram.getGender().equalsIgnoreCase("All") || currentProgram.getGender().equalsIgnoreCase("Male")){%>selected<%}%>   >Male</option>
+                                    <option value="Female"  <%if (currentProgram.getGender().equalsIgnoreCase("All") || currentProgram.getGender().equalsIgnoreCase("Female")){%>selected<%}%>   >Female</option>
+                                </select>
+                                </div>    
+
+                              </div>
+                              <!--/row-->
+                              <div class="row">&nbsp;</div>
+                              <div class="row">
+                                <div class="col-md-2">
+                                <label>
+                                  Barangay
+                                </label>
+                                </div>
+
+                                <div class="col-md-4">
+                                <select id="tag3" name="barangay" class="multipleselect" multiple="multiple">
+                                    <option value="Dolores" <%if(currentProgram.getBrgy().contains("Dolores")){%>selected<%}%> >Dolores</option>
+                                    <option value="Juliana" <%if(currentProgram.getBrgy().contains("Juliana")){%>selected<%}%>>Juliana</option>
+                                    <option value="Lourdes" <%if(currentProgram.getBrgy().contains("Lourdes")){%>selected<%}%>>Lourdes</option>
+                                    <option value="Magliman"    <%if(currentProgram.getBrgy().contains("Magliman")){%>selected<%}%>>Magliman</option>
+                                    <option value="San Jose"    <%if(currentProgram.getBrgy().contains("San Jose")){%>selected<%}%>>San Jose</option>
+                                    <option value="San Juan"    <%if(currentProgram.getBrgy().contains("San Juan")){%>selected<%}%>>San Juan</option>
+                                    <option value="Sto. Rosario"    <%if(currentProgram.getBrgy().contains("Sto. Rosario")){%>selected<%}%>>Sto. Rosario</option>
+                                    <option value="Sta. Teresita"   <%if(currentProgram.getBrgy().contains("Sta. Teresita")){%>selected<%}%>>Sta. Teresita</option>
+                                    <option value="Sto. Nino"   <%if(currentProgram.getBrgy().contains("Sto. Nino")){%>selected<%}%>>Sto. Nino</option>
+                                </select>
+                                </div>  
+                                
+                                  <div class="col-md-2"></div>
+                                  <div class="col-md-2" id="suggestedbutton" style="display: none;">
+                                      <button type="button" id="selectfamilynumber" name="selectfamilynumber" class="btn btn-primary btn-sm" data-toggle="modal" data-target=".program-modal"><i class="fa fa-book"></i> See Suggested Programs</button>
+                                  </div>  
+
+                              </div>
+                            </div><!--DEMOGRAPHICS-->
+                      </div>
+                      
+                      <!--SPACER-->
+                        <div class="col-md-12"><br></div>
+                    <!--SPACER-->
+                      
+                      
+                    </div><!--/form-group-->
+                    
+                    
+                    <!--BRIEF DESCRIPTION-->
+                    <div class="form-group row">
+                       <div class="col-md-12 col-sm-12 col-xs-12">
+                            <label class="control-label">Brief Description:</label>
+                        </div>
+                        <div class="col-md-12">
+                            <textarea type="text" required="required" class="form-control noMargin" id="description" name="description" cols="10" rows="5" placeholder="e.g. Description of project"><%=currentProgram.getDescription()%></textarea>
+                        </div><!--/col-md-5-->
+
+                    </div>
+                    <!--END OF DESCRIPTION--> 
+                            
+                    <!--RESOURCE-->
+                    <div class="form-group row">
+                        <div class="col-md-12 col-sm-12 col-xs-12">
+                            <label class="control-label">Resource Plan:</label>
+                        </div>
+                        <div class="col-md-12">
+                            <div class="row clearfix">    
+                                <div class="col-md-12 table-responsive">
+                                    <table class="table table-bordered table-hover table-sortable" id="tab_logic">
+                                        <thead>
+                                            <tr>
+                                                <th class="text-center">
+                                                    Item
+                                                </th>
+                                                <th class="text-center">
+                                                    Unit
+                                                </th>
+                                                <th class="text-center">
+                                                    Quantity
+                                                </th>
+                                                <th class="text-center">
+                                                    Price
+                                                </th>
+                                                <th class="text-center">
+                                                    Total
+                                                </th>
+                                                <th class="text-center">
+                                                </th>
+                                            </tr>
+                                        </thead>
+                                         
+                                        <tbody id="resourceplan">
+                                         <%
+                                            ArrayList<String> vName = new ArrayList<String>();
+                                            ArrayList<Resource> vList1 = nDAO.getAllResourcesOfProgram(programID);
+                                            for (int x = 0; x < vList1.size(); x++){
+                                        %>
+                                          <tr>
+                                            <td>
+                                                <input type="text" name="name"  placeholder="Item" class="form-control" value="<%=vList1.get(x).getItem()%>" required="required"/>
+                                            </td>
+                                            <td>
+                                                 <input  type="text" name="unit" placeholder="e.g. pc" class="form-control" value="<%=vList1.get(x).getUnit()%>" required="required"/>
+                                            </td>
+                                            <td>
+                                                <input type="number" id="quantity" name='quantity' placeholder="e.g. 1" class="form-control" value="<%=vList1.get(x).getQty()%>" required="required"/>
+                                            </td>
+                                            <td>
+                                                 <input id="price" type="number" name='price' step="0.01" placeholder="e.g 100" class="form-control required" value="<%=vList1.get(x).getPrice()%>" required="required"/>
+                                            </td>
+                                            <td>
+                                                <input type="text" id="total" name="total" placeholder="0.00" class="form-control total" value="<%=vList1.get(x).getTotal()%>" readonly />
+                                            </td>
+                                            <td>
+                                                <button type="button" onclick="updateTotal()" name="del" class='btn btn-danger glyphicon glyphicon-remove row-remove'></button>
+                                            </td>
+                                          </tr>
+                                          
+                                           <%}%>
+                                           
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                                
+                                <div class="row clearfix">
+                                    <div class="col-md-12">
+                                      <a id="add_row" class="btn btn-default pull-right">Add Row</a>
+                                    </div>
+                                </div>
+                                                                                  
+                                <div class="row clearfix" style="margin-top:20px">
+                                    <div class="pull-right col-xs-4">
+                                      <table class="table table-bordered table-hover" id="tab_logic_total">
+                                        <tbody id="totalbudget">
+                                          <tr>
+                                            <th class="text-center">Total Budget</th>
+                                            <td class="text-center"><input type="number" id="total_budget" name="total_budget" placeholder='0.00' step='0.01' class="form-control" value="<%=currentProgram.getTotal_price()%>" readonly/></td>
+                                          </tr>
+                                        </tbody>
+                                      </table>
+                                    </div>
+                                </div> 
+                        </div><!--/col-md-5-->
+                    </div>
+                    <!--RESOURCE-->   
+                             
+                     <footer>
+                        <div class="form-group" align="center">
+                            <div class="col-md-6 col-sm-6 col-xs-12 col-md-offset-2">
+                                <button  onclick="window.history.go(-1);" class="btn btn-default" type="button">Cancel</button>
+
+                                <button type="submit" class="btn btn-success" id="nextPage">Submit</button>
+                            </div>
+                        </div>
+                    </footer>
+                              
+
+                </div>
+                <!--x_content buong form-->
+                </div><!--x_panel buong form-->
+            <!-- End of Program Proposal-->
+            </form>
+            
+            <!--FAMILY SERIAL MODAL-->
+            <div class="modal fade program-modal" tabindex="-1" role="dialog" aria-hidden="true">
+                <div class="modal-dialog modal-lg">
+                  <div class="modal-content">
+
+                    <div class="modal-header">
+                      <button type="button" class="close" data-dismiss="modal"><i class="fa fa-close"></i>
+                      </button>
+                      <strong class="modal-title" id="myModalLabel">View Family Number</strong>
+                    </div>
+                    <div class="modal-body">
+        <div class="x_panel">
+                <form action="AddFamilyCode" method="post">
+                <div class="x_title">
+                    <i class="fa fa-book"></i>
+                    <!--get information from database!!-->
+                    <strong> Family Number </strong> 
+                    <!-- Elements-->
+
+                   <clearfix></clearfix>
+                <p/>
+                </div>
+
+                    <div class="x_content">
+                        <div class="col-md-12">
+                            <table id="datatable-responsive" class="table table-bordered dt-responsive nowrap" cellspacing="0" width="100%">
+                              <thead>
+                                <tr>
+                                  <th>Family Number </th>
+                                  <th>Family Name</th>
+                                  <th>First Registered Family Member</th>
+                                  <th></th>
+                                </tr>
+                              </thead>
+                              <%
+                                  nurseDAO nurseDAO = new nurseDAO();
+                              %>
+                              <tr>
+                                <td></td>
+                                <td></td>
+                                <td></td>
+                                <td style="text-align:right; width:50px;">
+                                </td>
+
+                              </tr>     
+
+                              <tbody>
+
+                              </tbody>
+                            </table>
+                        </div> <!--col-12-->
+                    </div> <!--x_content-->
+                </form>
+            </div><!--x_panel-->
+        </div>
+        <!--modal-body-->
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+        </div>
+
+      </div>
+    </div>
+  </div><!--Family Serial Modal-->
+            
+          
+               </div><!--col-md-12-->
+        </div><!--right_col-->
+            
+        </div><!--main_container-->
+    </div><!--container body-->
+    
+
+    
+    <!-- jQuery -->
+                <script src="vendors/jquery/dist/jquery.min.js"></script>
+                <!-- Bootstrap -->
+                <script src="vendors/bootstrap/dist/js/bootstrap.min.js"></script>
+                <!-- FastClick -->
+                <script src="vendors/fastclick/lib/fastclick.js"></script>
+                <!-- NProgress -->
+                <script src="vendors/nprogress/nprogress.js"></script>
+                <!-- bootstrap-progressbar -->
+                <script src="vendors/bootstrap-progressbar/bootstrap-progressbar.min.js"></script>
+                <!-- iCheck -->
+                <script src="vendors/iCheck/icheck.min.js"></script>
+                <!-- bootstrap-daterangepicker -->
+                <script src="vendors/moment/min/moment.min.js"></script>
+                <script src="vendors/bootstrap-daterangepicker/daterangepicker.js"></script>
+                <!-- bootstrap-wysiwyg -->
+                <script src="vendors/bootstrap-wysiwyg/js/bootstrap-wysiwyg.min.js"></script>
+                <script src="vendors/jquery.hotkeys/jquery.hotkeys.js"></script>
+                <script src="vendors/google-code-prettify/src/prettify.js"></script>
+                <!-- jQuery Tags Input -->
+                <script src="vendors/jquery.tagsinput/src/jquery.tagsinput.js"></script>
+                <!-- Switchery -->
+                <script src="vendors/switchery/dist/switchery.min.js"></script>
+                <!-- Select2 -->
+                <script src="vendors/select2/dist/js/select2.full.min.js"></script>
+                <!-- Parsley -->
+                <script src="vendors/parsleyjs/dist/parsley.min.js"></script>
+                <!-- Autosize -->
+                <script src="vendors/autosize/dist/autosize.min.js"></script>
+                <!-- jQuery autocomplete -->
+                <script src="vendors/devbridge-autocomplete/dist/jquery.autocomplete.min.js"></script>
+                <!-- starrr -->
+                <script src="vendors/starrr/dist/starrr.js"></script>
+                <!-- bootstrap datepicker -->
+                <script src="vendors/bootstrap-datepicker/dist/js/bootstrap-datepicker.min.js"></script>
+                <!--multiselect-->
+                 <script src="vendors/bootstrap-multiselect/dist/js/bootstrap-multiselect.js"></script>
+                <!-- Custom Theme Scripts -->
+                <script src="source/js/custom.min.js"></script>
+                <!-- bootstrap-datetimepicker -->    
+                <script src="vendors/bootstrap-datetimepicker/build/js/bootstrap-datetimepicker.min.js"></script>
+</body>
+   
+
+<!-- ADD ROW RESOURCE--> 
+<script>        
+$("#add_row").click(function () {
+     $("#resourceplan").each(function () {
+         var tds = '<tr>';
+         jQuery.each($('tr:last td', this), function () {
+             tds += '<td>' + $(this).html() + '</td>';
+         });
+         tds += '</tr>';
+         if ($('tbody', this).length > 0) {
+             $('tbody', this).append(tds);
+         } else {
+             $(this).append(tds);
+         }
+          updateTotal();
+     });
+    
+    
+});                     
+</script>
+
+<!-- Delete ROW RESOURCE--> 
+<script>        
+$(document).ready(function(){
+ $("#tab_logic").on('click','.row-remove',function(){
+       $(this).closest('tr').remove();
+       updateTotal();
+
+     });
+    
+});                  
+</script>
+
+
+<!-- CALCULATE PRICE -->
+<script>
+$("table").on("change", "input", function () {  //use event delegation
+  var tableRow = $(this).closest("tr");  //from input find row
+  var qty = Number(tableRow.find("#quantity").val());  //get quantity textbox
+  var price = Number(tableRow.find("#price").val());  //get price textbox
+  var total = (qty * price).toFixed(2);  //calculate total
+  tableRow.find("#total").val(total);  //set value
+  updateTotal();
+});
+</script>
+    
+<!-- CALCULATE TOTAL PRICE -->
+<script>
+function updateTotal(){
+    var sum=0;
+    $('.total').each(function(i, obj){
+
+     if($.isNumeric(this.value)) {
+                sum += parseFloat(this.value);
+            }
+         $('#total_budget').val(sum);
+     })
+   
+    
+}                        
+</script>      
+  
+<!--Create Program-->
+<script>
+function showDiv() {
+   document.getElementById('programproposalcard').style.display = "";
+   document.getElementById('createprogram').style.display = "none";
+}    
+</script>
+<!--multiselect-->
+<script type="text/javascript">
+    $(document).ready(function() {
+        $('.multipleselect').multiselect({
+            enableCaseInsensitiveFiltering: true,
+            filterBehavior: 'value',
+            includeSelectAllOption: true
+        });
+    });
+</script>
+
+<script>
+function updateFormEnabled() {
+    if (verifySettings()) {
+        document.getElementById('suggestedbutton').style.display = "block";
+    } else {
+        document.getElementById('suggestedbutton').style.display = "none";
+    }
+}
+
+function verifySettings() {
+    if ($('#tag1').val() != null || $('#tag2').val() != null || $('#tag3').val() != null || $('#category').val() != null) {
+        return true;
+    } else {
+        return false
+    }
+}
+
+$('#tag1').change(updateFormEnabled);
+$('#tag2').change(updateFormEnabled);
+$('#tag3').change(updateFormEnabled);
+$('#category').change(updateFormEnabled);
+    
+    
+</script>
+<script>
+     $('#datepicker1').datetimepicker({
+      format: 'YYYY-MM-DD'
+    });
+    $('#datepicker2').datetimepicker({
+      format: 'YYYY-MM-DD'
+    });
+    $(document).ready(function() {
+        $('.medication-multiple').select2();
+    });
+
+    $(document).ready(function() {
+        $(".medication-multiple").select2({
+        tags: true
+        });
+    });
+
+</script>
+
+<script>
+    $(document).ready(function() {
+        $('.medication-multiple').select2();
+    });
+
+    $(document).ready(function() {
+        $(".medication-multiple").select2({
+        tags: true
+        });
+    });
+</script>
+
+<script>
+$("#selectallimm").click(function () {
+$(".adultimmunization").prop('checked', $(this).prop('checked'));
+});
+</script>
+
+<!-- Diagnosis Select2 -->                                  
+<script>
+    
+    $(document).ready(function() {
+        $('.diagnosis-multiple').select2();
+    });
+
+    $(document).ready(function() {
+        $(".diagnosis-multiple").select2({
+        tags: true
+        });
+    });
+</script>
+
+
+</html>
